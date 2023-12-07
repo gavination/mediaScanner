@@ -1,10 +1,10 @@
 import { createMachine, assign } from "xstate";
 
-export const machine = createMachine(
+export const mediaScannerMachine = createMachine(
   {
     context: {
-      basePath: "Z:/Movies",
-      destinationPath: "Z:4KMovies",
+      basePath: "/Volumes/media/Movies",
+      destinationPath: "/Volumes/media/4kMovies",
       validFilePathSuffixes: [],
       filesToEvaluate: [],
       filestoMove: [],
