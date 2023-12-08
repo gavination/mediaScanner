@@ -1,15 +1,16 @@
-import { createMachine, assign } from "xstate";
+import { createMachine, assign, fromPromise } from "xstate";
+import { checkFilePermissions, evaluateFiles, scanDirectories } from "./fileHandlers";
 
 export const mediaScannerMachine = createMachine(
   {
     context: {
       basePath: "/Volumes/media/Movies",
       destinationPath: "/Volumes/media/4kMovies",
-      validFilePathSuffixes: [],
-      filesToEvaluate: [],
-      filestoMove: [],
+      directoriesToCheck: [],
+      dirsToEvaluate: [],
+      dirsToMove: [],
       filesToEmail: [],
-      filesToReport: [],
+      dirsToReport: [],
       processedFiles: [],
     },
     id: "mediaScanner",
@@ -24,14 +25,15 @@ export const mediaScannerMachine = createMachine(
       },
       Scanning: {
         description:
-          'Scan the media library and check the resolution of files. \n\nFor every file we find above 1080p, we add it to the context. \n\nIgnore the files already present in the ledger. Those are "known good"',
+          'Scan the media library and check for directories \n\nFor every file we can confirm is a directory, we add it to the context. \n\nIgnore the files already present in the ledger. Those are "known good"',
         invoke: {
-          src: "inline",
           id: "scanLibrary",
+          input: ({context: { basePath }}) => ({ basePath }),
+          src: fromPromise(({input}) => scanDirectories(input.basePath)),
           onDone: [
             {
               target: "CheckingFilePermissions",
-              actions: assign({ validFilePathSuffixes: (ctx) => ctx.event.output }),
+              actions: assign({ directoriesToCheck: (ctx) => ctx.event.output }),
             },
           ],
           onError: [
@@ -45,17 +47,28 @@ export const mediaScannerMachine = createMachine(
         description:
           "check the file permissions for all the files we need to scan.\n\nif we do not have read/write permissions, we update the context with the filenames/locations.\n\nif there are no files with read/write permissions, we move to the error state",
         invoke: {
-          src: "inline",
           id: "checkFilePermissions",
+          input: ({context: { directoriesToCheck }}) => ({ directoriesToCheck }),
+          src: fromPromise(({input: { directoriesToCheck }}) => checkFilePermissions(directoriesToCheck)),
           onDone: [
             {
               target: "EvaluatingFiles",
-              actions: assign({ filesToEvaluate: (ctx) => ctx.event.output }),
+              actions: assign(({event}) => {
+                return {
+                  dirsToEvaluate: event.output['dirsToEvaluate'],
+                  dirsToReport: event.output['dirsToReport'],
+                }
+              })
             },
           ],
           onError: [
             {
               target: "ReportingErrors",
+              actions: assign(({event}) => {
+                return {
+                  dirsToReport: event.error["dirsToReport"],
+                }
+              })
             },
           ],
         },
@@ -76,12 +89,11 @@ export const mediaScannerMachine = createMachine(
         description:
           "Evaluate the files to determine their resolution. If they are 4K, move them to a new directory",
         invoke: {
-          src: "evaluatingFiles",
-          id: "invoke-r1znu",
+          id: "evaluatingFiles",
+          input: ({context: { dirsToEvaluate }}) => ({ dirsToEvaluate }),
+          src: fromPromise(({input: { dirsToEvaluate }}) => evaluateFiles(dirsToEvaluate)),
           onDone: [
             {
-              target: "MovingFiles",
-              actions: assign({}),
             },
           ],
         },
@@ -126,12 +138,12 @@ export const mediaScannerMachine = createMachine(
       context: {} as {
         basePath: string;
         destinationPath: string;
-        validFilePathSuffixes: unknown[];
-        filesToEvaluate: unknown[];
-        filestoMove: unknown[];
-        filesToEmail: unknown[];
-        filesToReport: unknown[];
-        processedFiles: unknown[];
+        directoriesToCheck: string[];
+        dirsToEvaluate: string[];
+        dirsToMove: string[];
+        filesToEmail: string[];
+        dirsToReport: string[];
+        processedFiles: string[];
       },
     },
   },
@@ -140,17 +152,6 @@ export const mediaScannerMachine = createMachine(
       emailErrors: ({ context, event }) => {},
       updateLedger: ({ context, event }) => {},
       emailResults: ({ context, event }) => {},
-    },
-    actors: {
-      inline: createMachine({
-        /* ... */
-      }),
-      moveFiles: createMachine({
-        /* ... */
-      }),
-      evaluatingFiles: createMachine({
-        /* ... */
-      }),
     },
     guards: {},
     delays: {},
