@@ -12,6 +12,7 @@ export const mediaScannerMachine = createMachine(
       filesToEmail: [],
       dirsToReport: [],
       processedFiles: [],
+      acceptedFileTypes: ['mp4', 'mkv', 'avi', 'mov', 'm4v', 'mpg', 'mpeg', 'wmv', 'flv', 'ts', 'mts'],
     },
     id: "mediaScanner",
     initial: "idle",
@@ -144,6 +145,7 @@ export const mediaScannerMachine = createMachine(
         filesToEmail: string[];
         dirsToReport: string[];
         processedFiles: string[];
+        acceptedFileTypes: string[];
       },
     },
   },
