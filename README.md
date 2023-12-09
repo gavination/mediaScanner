@@ -1,4 +1,4 @@
-# Welcome to the world's most nice Media Scanner!
+# Welcome to the world's most niche Media Scanner!
 
 ## What?
 It's a small project that crawls a directory full of movies and separates out the 4K content. (well, specifically, content over 1080p)
