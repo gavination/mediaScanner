@@ -42,31 +42,36 @@ export async function scanDirectories(basePath: string) {
   }
 }
 
-
-export async function checkFilePermissions(
-directories: string[]
-) {
-  return new Promise((resolve, reject) => {
+export async function checkFilePermissions(directories: string[]) {
+  try {
     logger.info("checking directory permissions...");
-    let dirsToEvaluate: string[] = [];
-    let dirsToReport: string[] = [];
-    for (const dir of directories) {
-      // join the base path and the path suffix
+
+    const promises = directories.map(async (dir) => {
       try {
-        fs.access(dir, fs.constants.R_OK | fs.constants.W_OK);
+        await fs.access(dir, fs.constants.R_OK | fs.constants.W_OK);
         logger.info(`directory ${dir} is accessible`);
-        dirsToEvaluate.push(dir);
+        return { dir, status: 'accessible' };
       } catch (err) {
         logger.error(`cannot access directory ${dir}. Error: ${err}`);
-        dirsToReport.push(dir);
+        return { dir, status: 'inaccessible', error: err };
       }
-    }
+    });
+
+    const results = await Promise.all(promises);
+
+    const dirsToEvaluate = results.filter((result) => result.status === 'accessible').map((result) => result.dir);
+    const dirsToReport = results.filter((result) => result.status === 'inaccessible');
+
     if (dirsToEvaluate.length === 0) {
-      reject({message: "No accessible files found to move", dirsToReport});
+      throw { message: "No accessible files found to move", dirsToReport };
     }
-    resolve({dirsToEvaluate, dirsToReport});
-  });
+
+    return { dirsToEvaluate, dirsToReport };
+  } catch (error) {
+    throw { message: "Error checking file permissions", error };
+  }
 }
+
 export async function evaluateFiles(dirsToEvaluate: string[], acceptedFileTypes: string[]){
   // for each string in dirsToEvaluate, open the folder to find a proper media file. 
   // if a proper media file is found, check the file's dimensions.
