@@ -1,11 +1,11 @@
 import { createMachine, assign, fromPromise } from "xstate";
-import { checkFilePermissions, evaluateFiles, scanDirectories } from "./fileHandlers";
+import { checkFilePermissions, evaluateFiles, moveFiles, scanDirectories } from "./fileHandlers";
 
 export const mediaScannerMachine = createMachine(
   {
     context: {
       basePath: "/Volumes/media/Movies",
-      destinationPath: "/Volumes/media/4kMovies",
+      destinationPath: "/Volumes/media/4KMovies",
       directoriesToCheck: [],
       dirsToEvaluate: [],
       dirsToMove: [],
@@ -91,19 +91,26 @@ export const mediaScannerMachine = createMachine(
           "Evaluate the files to determine their resolution. If they are 4K, move them to a new directory",
         invoke: {
           id: "evaluatingFiles",
-          input: ({context: { dirsToEvaluate }}) => ({ dirsToEvaluate }),
-          src: fromPromise(({input: { dirsToEvaluate }}) => evaluateFiles(dirsToEvaluate)),
+          input: ({context: { dirsToEvaluate, acceptedFileTypes }}) => ({ dirsToEvaluate, acceptedFileTypes}),
+          src: fromPromise(({input: { dirsToEvaluate, acceptedFileTypes }}) => evaluateFiles(dirsToEvaluate, acceptedFileTypes)),
           onDone: [
             {
+              target: "MovingFiles",
+              actions: assign(({event}) => {
+                return {
+                  dirsToMove: event.output['dirsToMove'],
+                }
+              })
             },
           ],
         },
       },
       MovingFiles: {
-        description: "move all the files present in context to the destination library",
+        description: "Move all the files present in context to the destination library",
         invoke: {
-          src: "moveFiles",
-          id: "invoke-ek4dc",
+          input: ({context: { dirsToMove, destinationPath }}) => ({ dirsToMove, destinationPath }),
+          src: fromPromise(({input: { dirsToMove, destinationPath }}) => moveFiles(dirsToMove, destinationPath)),
+          id: "moveFiles",
           onDone: [
             {
               target: "UpdateLedger",
