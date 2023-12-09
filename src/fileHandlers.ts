@@ -72,42 +72,44 @@ export async function checkFilePermissions(directories: string[]) {
   }
 }
 
-export async function evaluateFiles(dirsToEvaluate: string[], acceptedFileTypes: string[]){
-  // for each string in dirsToEvaluate, open the folder to find a proper media file. 
-  // if a proper media file is found, check the file's dimensions.
-  // 1080p is 1920x1080
-  // 4K is 3840x2160
-  // Assume anything over 1080p is 4K and add it to the list of files to move
-  return new Promise(async (resolve, reject) => {
+export async function evaluateFiles(dirsToEvaluate: string[], acceptedFileTypes: string[]) {
+  try {
     logger.info('checking files in directories...');
-    let dirsToMove: string[] = [];
-    
+    const dirsToMove: string[] = [];
+
     for (const dir of dirsToEvaluate) {
-      // read the directory's files
-      const filenames = await fs.readdir(dir);
-      // check each file's type
-      for(const file of filenames){
-        // if the file is a valid type, check the file's dimensions
-        if(acceptedFileTypes.includes(file.split('.').pop()!)){
-          // read the file's dimensions
-          await probe(dir + "/" + file).then((result) => {
-            console.log(result.streams[0].width, result.streams[0].height);
-            if (result.streams[0].width > 1920 && result.streams[0].height > 1080){
-              console.log(`file ${file} is greater than 1080p. Assuming 4K`);
-              dirsToMove.push(dir + "/" + file);
+      try {
+        // read the directory's files
+        const filenames = await fs.readdir(dir);
+
+        // check each file's type
+        for (const file of filenames) {
+          // if the file is a valid type, check the file's dimensions
+          const fileExtension = file.split('.').pop();
+          if (fileExtension && acceptedFileTypes.includes(fileExtension)) {
+            // read the file's dimensions
+            const result = await probe(path.join(dir, file));
+            if (result.streams[0].width > 1920 && result.streams[0].height > 1080) {
+              logger.info(`file ${file} is greater than 1080p. Assuming 4K`);
+              dirsToMove.push(path.join(dir, file));
             }
-          }).catch((error) => {
-            console.log('error reading file: ', error);
-          });
+          }
         }
-        
+      } catch (error) {
+        console.log(`error reading directory ${dir}: `, error);
       }
     }
+
     if (dirsToMove.length === 0) {
-      reject({message: "No files found to move", dirsToMove});
+      throw { message: "No files found to move", dirsToMove };
     }
-    resolve({dirsToMove});
-  })}
+
+    return { dirsToMove };
+  } catch (error) {
+    throw { message: "Error evaluating files", error };
+  }
+}
+
 
 export async function moveFiles(dirsToMove: string[], destinationBasePath: string){
   // testing with the first file in the list
