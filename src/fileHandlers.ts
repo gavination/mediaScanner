@@ -97,6 +97,7 @@ export async function evaluateFiles(dirsToEvaluate: string[], acceptedFileTypes:
         }
       } catch (error) {
         console.log(`error reading directory ${dir}: `, error);
+        //todo: add to a collection of directories that we need to report
       }
     }
 
@@ -111,28 +112,32 @@ export async function evaluateFiles(dirsToEvaluate: string[], acceptedFileTypes:
 }
 
 
-export async function moveFiles(dirsToMove: string[], destinationBasePath: string){
-  // testing with the first file in the list
-  return new Promise((resolve, reject) => {
+export async function moveFiles(dirsToMove: string[], destinationBasePath: string) {
+  try {
     logger.info('moving files...');
 
-    for (const dir of dirsToMove) {
-      logger.info(`moving ${dir} to ${destinationBasePath}....`);
+    const errors: Array<{ source: string; destination: string; error: any }> = [];
 
+    for (const dir of dirsToMove) {
       const parentDir = path.dirname(dir);
       const newDirName = path.basename(parentDir);
-      const destinationDir = destinationBasePath + "/" + newDirName;
-  
-      fsExtra.move(parentDir, destinationDir, { overwrite: true }, (err) => {
-        if (err) {
-          logger.error(` failed to move ${dir} to ${destinationDir}. Error: ${err}`);
-          reject(err);
-        }
-        console.log(`moved ${dir} to ${destinationDir} successfully`);
-      });
-    }
-    resolve({message: "files moved"});
-  
-  });
+      const destinationDir = path.join(destinationBasePath, newDirName);
 
+      try {
+        await fsExtra.move(parentDir, destinationDir, { overwrite: true });
+        console.log(`moved ${dir} to ${destinationDir} successfully`);
+      } catch (error) {
+        logger.error(`failed to move ${dir} to ${destinationDir}. Error: ${error}`);
+        errors.push({ source: dir, destination: destinationDir, error });
+      }
+    }
+
+    if (errors.length > 0) {
+      return { message: "files moved with errors", errors };
+    } else {
+      return { message: "all files moved successfully" };
+    }
+  } catch (error) {
+    throw { message: "Error moving files", error };
+  }
 }
