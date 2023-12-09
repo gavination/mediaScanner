@@ -105,19 +105,24 @@ export async function evaluateFiles(dirsToEvaluate: string[], acceptedFileTypes:
 export async function moveFiles(dirsToMove: string[], destinationBasePath: string){
   // testing with the first file in the list
   return new Promise((resolve, reject) => {
-    console.log('moving files...');
-    const parentDir = path.dirname(dirsToMove[0]);
-    const newDirName = path.basename(parentDir);
-    const destinationDir = destinationBasePath + "/" + newDirName;
+    logger.info('moving files...');
 
-    fsExtra.move(parentDir, destinationDir, { overwrite: true }, (err) => {
-      if (err) {
-        console.error(err);
-        reject(err);
-      }
-      console.log("files moved successfully");
-      resolve({message: "files moved"});
-    });
+    for (const dir of dirsToMove) {
+      logger.info(`moving ${dir} to ${destinationBasePath}....`);
+
+      const parentDir = path.dirname(dir);
+      const newDirName = path.basename(parentDir);
+      const destinationDir = destinationBasePath + "/" + newDirName;
+  
+      fsExtra.move(parentDir, destinationDir, { overwrite: true }, (err) => {
+        if (err) {
+          logger.error(` failed to move ${dir} to ${destinationDir}. Error: ${err}`);
+          reject(err);
+        }
+        console.log(`moved ${dir} to ${destinationDir} successfully`);
+      });
+    }
+    resolve({message: "files moved"});
   
   });
 
