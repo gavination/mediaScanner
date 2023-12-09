@@ -11,7 +11,6 @@ import { createActor } from "xstate";
   mediaScannerActor.subscribe((state) => {
     console.log({
       state: state.value,
-      context: state.context,
       error: state.error,
     });
   });

@@ -1,4 +1,4 @@
-import * as fs from "fs";
+import * as fs from "fs/promises";
 import * as fsExtra from "fs-extra";
 import path, { dirname, resolve } from "path";
 import probe from "node-ffprobe";
@@ -17,29 +17,31 @@ const logger = winston.createLogger({
 
 });
 
-export async function scanDirectories(basePath: string) {
-  return new Promise((resolve, reject) => {
-    logger.info("scanning directories...");
 
-    let validDirectories: string[] = [];
-    fs.readdir(basePath, function (err, files) {
-      if (err) {
-        reject("Unable to scan directory: " + err);
+export async function scanDirectories(basePath: string) {
+  try {
+    const files = await fs.readdir(basePath);
+    const validDirectories: string[] = [];
+
+    for (const file of files) {
+      const fullPath = basePath + "/" + file;
+      const stats = await fs.stat(fullPath);
+
+      if (stats.isDirectory()) {
+        validDirectories.push(fullPath);
       }
-      files.forEach(async function (file) {
-        const fullPath = basePath + "/" + file;
-        let stats = fs.statSync(fullPath);
-        if (stats.isDirectory()) {
-          validDirectories.push(fullPath);
-        }
-      });
-      if (validDirectories.length === 0) {
-        reject("No valid directories found");
-      }
-      resolve(validDirectories);
-    });
-  });
+    }
+
+    if (validDirectories.length === 0) {
+      throw new Error("No valid directories found");
+    }
+
+    return validDirectories;
+  } catch (error) {
+    throw new Error("Unable to scan directory: " + error.message);
+  }
 }
+
 
 export async function checkFilePermissions(
 directories: string[]
@@ -51,7 +53,7 @@ directories: string[]
     for (const dir of directories) {
       // join the base path and the path suffix
       try {
-        fs.accessSync(dir, fs.constants.R_OK | fs.constants.W_OK);
+        fs.access(dir, fs.constants.R_OK | fs.constants.W_OK);
         logger.info(`directory ${dir} is accessible`);
         dirsToEvaluate.push(dir);
       } catch (err) {
@@ -77,7 +79,7 @@ export async function evaluateFiles(dirsToEvaluate: string[], acceptedFileTypes:
     
     for (const dir of dirsToEvaluate) {
       // read the directory's files
-      const filenames = fs.readdirSync(dir);
+      const filenames = await fs.readdir(dir);
       // check each file's type
       for(const file of filenames){
         // if the file is a valid type, check the file's dimensions
