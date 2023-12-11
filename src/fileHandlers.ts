@@ -57,20 +57,10 @@ export async function checkFilePermissions(directories: string[]) {
       }
     });
 
-    // const results = await Promise.all(promises);
-    const results = await Promise.allSettled(promises);
+    const results = await Promise.all(promises);
 
-    // const dirsToEvaluate = results.filter((result) => result.status === 'accessible').map((result) => result.dir);
-    // const dirsToReport = results.filter((result) => result.status === 'inaccessible');
-
-    const isRejected = (input: PromiseSettledResult<unknown>): input is PromiseRejectedResult => 
-      input.status === 'rejected';
-
-    const isFulfilled = <T>(input: PromiseSettledResult<T>): input is PromiseFulfilledResult<T> => 
-      input.status === 'fulfilled';
-
-    const dirsToEvaluate = results.filter(isFulfilled).map((result) => result.value.dir);
-    const dirsToReport = results.filter(isRejected).map((result) => result.reason);
+    const dirsToEvaluate = results.filter((result) => result.status === 'accessible').map((result) => result.dir);
+    const dirsToReport = results.filter((result) => result.status === 'inaccessible').map((result) => result.dir);
 
     if (dirsToEvaluate.length === 0) {
       throw { message: "No accessible files found to move", dirsToReport };
