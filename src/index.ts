@@ -1,12 +1,16 @@
-import { scanDirectories } from "./fileHandlers";
-import { mediaScannerMachine } from "./mediaScannerMachine";
-import { createActor } from "xstate";
+import { scanDirectories } from './fileHandlers';
+import { mediaScannerMachine } from './mediaScannerMachine';
+import { createActor } from 'xstate';
 
 (async () => {
+  console.log('Starting the awesome media scanner thingy');
 
-  console.log("Starting the awesome media scanner thingy");
-
-  const mediaScannerActor = createActor(mediaScannerMachine);
+  const mediaScannerActor = createActor(mediaScannerMachine, {
+    input: {
+      basePath: 'YOUR BASE PATH HERE',
+      destinationPath: 'YOUR DESTINATION PATH HERE',
+    },
+  });
 
   mediaScannerActor.subscribe((state) => {
     console.log({
@@ -16,5 +20,5 @@ import { createActor } from "xstate";
   });
 
   mediaScannerActor.start();
-  mediaScannerActor.send({ type: "START_SCAN" });
+  mediaScannerActor.send({ type: 'START_SCAN' });
 })();
