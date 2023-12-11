@@ -1,4 +1,3 @@
-import { scanDirectories } from './fileHandlers';
 import { mediaScannerMachine } from './mediaScannerMachine';
 import { createActor } from 'xstate';
 
