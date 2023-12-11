@@ -7,8 +7,8 @@ import { createActor } from 'xstate';
 
   const mediaScannerActor = createActor(mediaScannerMachine, {
     input: {
-      basePath: '/Volumes/media/Movies',
-      destinationPath: '/Volumes/media/4KMovies',
+      basePath: 'YOUR BASE PATH HERE',
+      destinationPath: 'YOUR DESTINATION PATH HERE',
     },
   });
 
