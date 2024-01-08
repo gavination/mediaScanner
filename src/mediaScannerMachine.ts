@@ -33,20 +33,19 @@ export const mediaScannerMachine = setup({
   },
   actors: {
     scanDirectories: fromPromise(
-      async ({ input }: { input: { basePath: string } }) => {
-        return await scanDirectories(input.basePath);
-      }
+      async ({ input }: { input: { basePath: string } }) =>
+        await scanDirectories(input.basePath)
     ),
     checkFilePermissions: fromPromise(
-      async ({ input }: { input: { directoriesToCheck } }) =>
+      async ({ input }: { input: { directoriesToCheck: string[] } }) =>
         await checkFilePermissions(input.directoriesToCheck)
     ),
     evaluateFiles: fromPromise(
-      async ({ input }: { input: { dirsToEvaluate; acceptedFileTypes } }) =>
+      async ({ input }: { input: { dirsToEvaluate: string[]; acceptedFileTypes: string[] } }) =>
         await evaluateFiles(input.dirsToEvaluate, input.acceptedFileTypes)
     ),
     moveFiles: fromPromise(
-      async ({ input }: { input: { dirsToMove; destinationPath } }) =>
+      async ({ input }: { input: { dirsToMove: string[]; destinationPath: string } }) =>
         await moveFiles(input.dirsToMove, input.destinationPath)
     ),
   },
